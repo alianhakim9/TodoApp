@@ -16,7 +16,7 @@ class TodosAdapter : ListAdapter<Todo, TodosAdapter.TodoViewHolder>(TodoCallBack
             binding.apply {
                 checkBoxCompleted.isChecked = todo.isCompleted
                 textViewName.text = todo.title
-                textViewName.paint.isStrikeThruText = todo.isImportant
+                textViewName.paint.isStrikeThruText = todo.isCompleted
                 labelPriority.isVisible = todo.isImportant
             }
         }

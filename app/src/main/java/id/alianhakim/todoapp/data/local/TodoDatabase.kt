@@ -11,9 +11,7 @@ import javax.inject.Inject
 import javax.inject.Provider
 
 @Database(
-    entities = [
-        Todo::class
-    ],
+    entities = [Todo::class],
     version = 1,
     exportSchema = true
 )
@@ -37,32 +35,10 @@ abstract class TodoDatabase : RoomDatabase() {
             val dao = database.get().todoDao()
             // coroutine scope to launch insert method
             applicationScope.launch {
-                dao.insert(
-                    Todo(
-                        title = "Coding",
-                        isCompleted = false,
-                        isImportant = true,
-                    ),
-                )
-                dao.insert(
-                    Todo(
-                        title = "Title 2",
-                        isCompleted = false,
-                        isImportant = true,
-                    ),
-                )
-                dao.insert(
-                    Todo(
-                        title = "Title 3",
-                        isCompleted = false,
-                    ),
-                )
-                dao.insert(
-                    Todo(
-                        title = "Title 4",
-                        isCompleted = true,
-                    ),
-                )
+                dao.insert(Todo(title = "Coding", isCompleted = false, isImportant = true))
+                dao.insert(Todo(title = "Title 2", isCompleted = false, isImportant = true))
+                dao.insert(Todo(title = "Title 3", isCompleted = false))
+                dao.insert(Todo(title = "Title 4", isCompleted = true))
             }
         }
     }
