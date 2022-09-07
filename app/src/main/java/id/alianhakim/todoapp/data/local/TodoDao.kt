@@ -15,6 +15,6 @@ interface TodoDao {
     @Delete
     suspend fun delete(todo: Todo)
 
-    @Query("SELECT * FROM todos_table")
-    fun getTodos(): Flow<List<Todo>>
+    @Query("SELECT * FROM todos_table WHERE title LIKE '%' || :searchQuery || '%' ORDER BY is_important DESC")
+    fun getTodos(searchQuery: String): Flow<List<Todo>>
 }
