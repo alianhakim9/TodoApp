@@ -13,7 +13,10 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import id.alianhakim.todoapp.R
 import id.alianhakim.todoapp.data.SortOrder
@@ -41,6 +44,21 @@ class TodosFragment : Fragment(R.layout.fragment_todos), OnItemClickListener {
             fabAddTask.setOnClickListener {
                 findNavController().navigate(R.id.action_todosFragment_to_addEditTodoFragment)
             }
+            ItemTouchHelper(object :
+                ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+                override fun onMove(
+                    recyclerView: RecyclerView,
+                    viewHolder: RecyclerView.ViewHolder,
+                    target: RecyclerView.ViewHolder
+                ): Boolean {
+                    return false
+                }
+
+                override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                    val todo = todosAdapter.currentList[viewHolder.adapterPosition]
+                    viewModel.onTodoSwiped(todo)
+                }
+            }).attachToRecyclerView(recyclerViewTasks)
         }
 
         viewModel.todos.observe(viewLifecycleOwner) {
@@ -49,6 +67,23 @@ class TodosFragment : Fragment(R.layout.fragment_todos), OnItemClickListener {
 
         // actionbar menu
         actionBarMenu()
+
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            viewModel.todoEvent.collect { event ->
+                when (event) {
+                    is TodoEvent.ShowUndoDeleteTodoMessage -> {
+                        Snackbar.make(requireView(), "Todo has been deleted", Snackbar.LENGTH_SHORT)
+                            .also { snackBar ->
+                                snackBar.setAction("UNDO") {
+                                    // event.todo get from smart cast
+                                    viewModel.onUndoDeleteClick(event.todo)
+                                    snackBar.dismiss()
+                                }
+                            }.show()
+                    }
+                }
+            }
+        }
     }
 
     override fun onDestroyView() {

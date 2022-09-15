@@ -9,9 +9,11 @@ import id.alianhakim.todoapp.data.SortOrder
 import id.alianhakim.todoapp.data.local.TodoDao
 import id.alianhakim.todoapp.entity.Todo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -23,6 +25,9 @@ class TodoViewModel @Inject constructor(
     val searchQuery = MutableStateFlow("")
 
     val preferencesFlow = preferencesRepository.preferencesFlow
+
+    private val todoEventChannel = Channel<TodoEvent>()
+    val todoEvent = todoEventChannel.receiveAsFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val todosFlow =
@@ -54,5 +59,21 @@ class TodoViewModel @Inject constructor(
     fun onTodoCheckChanged(todo: Todo, checked: Boolean) = viewModelScope.launch {
         todoDao.update(todo.copy(isCompleted = checked))
     }
+
+    fun onTodoSwiped(todo: Todo?) = viewModelScope.launch {
+        if (todo != null) {
+            todoDao.delete(todo)
+            todoEventChannel.send(TodoEvent.ShowUndoDeleteTodoMessage(todo))
+        }
+    }
+
+    fun onUndoDeleteClick(todo: Todo) = viewModelScope.launch {
+        todoDao.insert(todo)
+    }
 }
 
+
+// same as enum but sealed class can hold the data
+sealed class TodoEvent {
+    data class ShowUndoDeleteTodoMessage(val todo: Todo) : TodoEvent()
+}
