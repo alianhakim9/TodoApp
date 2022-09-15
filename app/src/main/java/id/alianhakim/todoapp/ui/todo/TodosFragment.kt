@@ -11,21 +11,26 @@ import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import id.alianhakim.todoapp.R
+import id.alianhakim.todoapp.data.SortOrder
 import id.alianhakim.todoapp.databinding.FragmentTodosBinding
+import id.alianhakim.todoapp.entity.Todo
+import id.alianhakim.todoapp.ui.todo.TodosAdapter.OnItemClickListener
 import id.alianhakim.todoapp.utils.onQueryTextChanged
+import kotlinx.coroutines.flow.first
 
 @AndroidEntryPoint
-class TodosFragment : Fragment(R.layout.fragment_todos) {
+class TodosFragment : Fragment(R.layout.fragment_todos), OnItemClickListener {
 
     private var _binding: FragmentTodosBinding? = null
     private val binding get() = _binding!!
 
     private val viewModel by viewModels<TodoViewModel>()
-    private val todosAdapter by lazy { TodosAdapter() }
+    private val todosAdapter by lazy { TodosAdapter(this) }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -73,23 +78,29 @@ class TodosFragment : Fragment(R.layout.fragment_todos) {
                 searchView.onQueryTextChanged {
                     viewModel.searchQuery.value = it
                 }
+
+                viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+                    menu.findItem(R.id.action_hide_completed_todo).isChecked =
+                            // get single value from flow
+                        viewModel.preferencesFlow.first().hideCompleted
+                }
             }
 
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 return when (menuItem.itemId) {
-                    R.id.action_sort_by_name -> {
-                        viewModel.sortOrder.value = SortOrder.SORT_BY_TITLE
+                    R.id.action_sort_by_title -> {
+                        viewModel.onSortOrderSelected(SortOrder.SORT_BY_TITLE)
                         true
                     }
 
                     R.id.action_sort_by_date_created -> {
-                        viewModel.sortOrder.value = SortOrder.SORT_BY_DATE
+                        viewModel.onSortOrderSelected(SortOrder.SORT_BY_DATE)
                         true
                     }
 
                     R.id.action_hide_completed_todo -> {
                         menuItem.isChecked = !menuItem.isChecked
-                        viewModel.hideCompleted.value = menuItem.isChecked
+                        viewModel.onHideCompleted(menuItem.isChecked)
                         true
                     }
 
@@ -100,5 +111,13 @@ class TodosFragment : Fragment(R.layout.fragment_todos) {
                 }
             }
         }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+    }
+
+    override fun onItemClick(todo: Todo) {
+        viewModel.onTodoSelected(todo)
+    }
+
+    override fun onCheckboxClick(todo: Todo, isChecked: Boolean) {
+        viewModel.onTodoCheckChanged(todo, isChecked)
     }
 }

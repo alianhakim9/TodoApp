@@ -17,7 +17,7 @@
         app:showAsAction="ifRoom">
         <menu>
             <item
-                android:id="@+id/action_sort_by_name"
+                android:id="@+id/action_sort_by_title"
                 android:title="Sort by name" />
 
             <item

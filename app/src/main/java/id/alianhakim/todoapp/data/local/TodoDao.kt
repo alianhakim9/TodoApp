@@ -1,8 +1,8 @@
 package id.alianhakim.todoapp.data.local
 
 import androidx.room.*
+import id.alianhakim.todoapp.data.SortOrder
 import id.alianhakim.todoapp.entity.Todo
-import id.alianhakim.todoapp.ui.todo.SortOrder
 import kotlinx.coroutines.flow.Flow
 
 @Dao

@@ -9,9 +9,32 @@ import androidx.recyclerview.widget.RecyclerView
 import id.alianhakim.todoapp.databinding.ItemTodoBinding
 import id.alianhakim.todoapp.entity.Todo
 
-class TodosAdapter : ListAdapter<Todo, TodosAdapter.TodoViewHolder>(TodoCallBack()) {
+class TodosAdapter constructor(
+    private val listener: OnItemClickListener
+) : ListAdapter<Todo, TodosAdapter.TodoViewHolder>(TodoCallBack()) {
     inner class TodoViewHolder(private val binding: ItemTodoBinding) :
         RecyclerView.ViewHolder(binding.root) {
+
+        init {
+            binding.apply {
+                root.setOnClickListener {
+                    val position = adapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        val todo = getItem(position)
+                        listener.onItemClick(todo)
+                    }
+                }
+
+                checkBoxCompleted.setOnClickListener {
+                    val position = adapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        val todo = getItem(position)
+                        listener.onCheckboxClick(todo, checkBoxCompleted.isChecked)
+                    }
+                }
+            }
+        }
+
         fun bind(todo: Todo) {
             binding.apply {
                 checkBoxCompleted.isChecked = todo.isCompleted
@@ -40,5 +63,11 @@ class TodosAdapter : ListAdapter<Todo, TodosAdapter.TodoViewHolder>(TodoCallBack
     override fun onBindViewHolder(holder: TodoViewHolder, position: Int) {
         val currentItem = getItem(position)
         holder.bind(todo = currentItem)
+    }
+
+    // handle onClick
+    interface OnItemClickListener {
+        fun onItemClick(todo: Todo)
+        fun onCheckboxClick(todo: Todo, isChecked: Boolean)
     }
 }
