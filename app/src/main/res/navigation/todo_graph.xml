@@ -8,8 +8,8 @@
     <fragment
         android:id="@+id/todosFragment"
         android:name="id.alianhakim.todoapp.ui.todo.TodosFragment"
-        android:label="fragment_todos"
-        tools:layout="@layout/fragment_todos" >
+        android:label="Todos"
+        tools:layout="@layout/fragment_todos">
         <action
             android:id="@+id/action_todosFragment_to_addEditTodoFragment"
             app:destination="@id/addEditTodoFragment" />
@@ -17,6 +17,19 @@
     <fragment
         android:id="@+id/addEditTodoFragment"
         android:name="id.alianhakim.todoapp.ui.todo.AddEditTodoFragment"
-        android:label="fragment_add_edit_todo"
-        tools:layout="@layout/fragment_add_edit_todo" />
+        android:label="{title}"
+        tools:layout="@layout/fragment_add_edit_todo">
+        <argument
+            android:name="todo"
+            android:defaultValue="@null"
+            app:argType="id.alianhakim.todoapp.entity.Todo"
+            app:nullable="true" />
+        <argument
+            android:name="title"
+            app:argType="string" />
+    </fragment>
+    <dialog
+        android:id="@+id/deleteAllCompletedDialogFragment"
+        android:name="id.alianhakim.todoapp.ui.deleteAllCompleted.DeleteAllCompletedDialogFragment"
+        android:label="DeleteAllCompletedDialogFragment" /><action android:id="@+id/action_global_deleteAllCompletedDialogFragment" app:destination="@id/deleteAllCompletedDialogFragment"/>
 </navigation>

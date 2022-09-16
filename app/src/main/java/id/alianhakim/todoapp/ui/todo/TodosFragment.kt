@@ -9,6 +9,7 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.setFragmentResultListener
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -23,6 +24,9 @@ import id.alianhakim.todoapp.data.SortOrder
 import id.alianhakim.todoapp.databinding.FragmentTodosBinding
 import id.alianhakim.todoapp.entity.Todo
 import id.alianhakim.todoapp.ui.todo.TodosAdapter.OnItemClickListener
+import id.alianhakim.todoapp.ui.todo.viewmodels.TodoEvent
+import id.alianhakim.todoapp.ui.todo.viewmodels.TodoViewModel
+import id.alianhakim.todoapp.utils.exhaustive
 import id.alianhakim.todoapp.utils.onQueryTextChanged
 import kotlinx.coroutines.flow.first
 
@@ -34,6 +38,7 @@ class TodosFragment : Fragment(R.layout.fragment_todos), OnItemClickListener {
 
     private val viewModel by viewModels<TodoViewModel>()
     private val todosAdapter by lazy { TodosAdapter(this) }
+    private lateinit var searchView: SearchView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -42,7 +47,7 @@ class TodosFragment : Fragment(R.layout.fragment_todos), OnItemClickListener {
 
         binding.apply {
             fabAddTask.setOnClickListener {
-                findNavController().navigate(R.id.action_todosFragment_to_addEditTodoFragment)
+                viewModel.setOnAddTodoClick()
             }
             ItemTouchHelper(object :
                 ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
@@ -61,6 +66,7 @@ class TodosFragment : Fragment(R.layout.fragment_todos), OnItemClickListener {
             }).attachToRecyclerView(recyclerViewTasks)
         }
 
+        // get data from viewModel and set to recyclerView
         viewModel.todos.observe(viewLifecycleOwner) {
             todosAdapter.submitList(it)
         }
@@ -68,6 +74,7 @@ class TodosFragment : Fragment(R.layout.fragment_todos), OnItemClickListener {
         // actionbar menu
         actionBarMenu()
 
+        // handle event from viewModel
         viewLifecycleOwner.lifecycleScope.launchWhenStarted {
             viewModel.todoEvent.collect { event ->
                 when (event) {
@@ -81,14 +88,42 @@ class TodosFragment : Fragment(R.layout.fragment_todos), OnItemClickListener {
                                 }
                             }.show()
                     }
-                }
+                    is TodoEvent.NavigateToAddTodoScreen -> {
+                        val action =
+                            TodosFragmentDirections.actionTodosFragmentToAddEditTodoFragment(title = "Add Todo")
+                        findNavController().navigate(action)
+                    }
+                    is TodoEvent.NavigateToEditTodoScreen -> {
+                        val action =
+                            TodosFragmentDirections.actionTodosFragmentToAddEditTodoFragment(
+                                title = "Edit Todo",
+                                event.todo
+                            )
+                        findNavController().navigate(action)
+                    }
+                    is TodoEvent.ShowTodoSavedConfirmationMessage -> {
+                        Snackbar.make(requireView(), event.message, Snackbar.LENGTH_SHORT).show()
+                    }
+                    is TodoEvent.NavigateToDeleteAllCompletedScreen -> {
+                        val action =
+                            TodosFragmentDirections.actionGlobalDeleteAllCompletedDialogFragment()
+                        findNavController().navigate(action)
+                    }
+                }.exhaustive
             }
+        }
+
+        // get result from add edit fragment
+        setFragmentResultListener("add_edit_todo_request") { _, bundle ->
+            val result = bundle.getInt("add_edit_result")
+            viewModel.onAddEditResult(result)
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+        searchView.setOnQueryTextListener(null)
     }
 
     private fun setupRecyclerView() {
@@ -108,10 +143,16 @@ class TodosFragment : Fragment(R.layout.fragment_todos), OnItemClickListener {
                 menuInflater.inflate(R.menu.menu_fragment_todos, menu)
 
                 val searchItem = menu.findItem(R.id.action_search)
-                val searchView = searchItem.actionView as SearchView
+                searchView = searchItem.actionView as SearchView
 
                 searchView.onQueryTextChanged {
                     viewModel.searchQuery.value = it
+                }
+
+                val pendingQuery = viewModel.searchQuery.value
+                if (pendingQuery != null && pendingQuery.isNotEmpty()) {
+                    searchItem.expandActionView()
+                    searchView.setQuery(pendingQuery, false)
                 }
 
                 viewLifecycleOwner.lifecycleScope.launchWhenStarted {
@@ -140,6 +181,7 @@ class TodosFragment : Fragment(R.layout.fragment_todos), OnItemClickListener {
                     }
 
                     R.id.action_delete_all_completed_todo -> {
+                        viewModel.onDeleteAllCompletedClick()
                         true
                     }
                     else -> false

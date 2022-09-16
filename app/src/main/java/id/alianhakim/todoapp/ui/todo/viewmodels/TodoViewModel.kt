@@ -1,16 +1,15 @@
-package id.alianhakim.todoapp.ui.todo
+package id.alianhakim.todoapp.ui.todo.viewmodels
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import id.alianhakim.todoapp.data.PreferencesRepository
 import id.alianhakim.todoapp.data.SortOrder
 import id.alianhakim.todoapp.data.local.TodoDao
 import id.alianhakim.todoapp.entity.Todo
+import id.alianhakim.todoapp.ui.todo.ADD_TODO_RESULT_OK
+import id.alianhakim.todoapp.ui.todo.EDIT_TODO_RESULT_OK
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -20,9 +19,10 @@ import javax.inject.Inject
 @HiltViewModel
 class TodoViewModel @Inject constructor(
     private val todoDao: TodoDao,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    state: SavedStateHandle
 ) : ViewModel() {
-    val searchQuery = MutableStateFlow("")
+    val searchQuery = state.getLiveData("searchQuery", "")
 
     val preferencesFlow = preferencesRepository.preferencesFlow
 
@@ -32,7 +32,7 @@ class TodoViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val todosFlow =
         combine(
-            searchQuery,
+            searchQuery.asFlow(),
             preferencesFlow
         ) { query, filterPreferences ->
             Pair(query, filterPreferences)
@@ -52,8 +52,8 @@ class TodoViewModel @Inject constructor(
         preferencesRepository.updateHideCompleted(hideCompleted)
     }
 
-    fun onTodoSelected(todo: Todo) {
-
+    fun onTodoSelected(todo: Todo) = viewModelScope.launch {
+        todoEventChannel.send(TodoEvent.NavigateToEditTodoScreen(todo))
     }
 
     fun onTodoCheckChanged(todo: Todo, checked: Boolean) = viewModelScope.launch {
@@ -70,10 +70,36 @@ class TodoViewModel @Inject constructor(
     fun onUndoDeleteClick(todo: Todo) = viewModelScope.launch {
         todoDao.insert(todo)
     }
-}
 
+    fun setOnAddTodoClick() = viewModelScope.launch {
+        todoEventChannel.send(TodoEvent.NavigateToAddTodoScreen)
+    }
+
+    fun onAddEditResult(result: Int) {
+        when (result) {
+            ADD_TODO_RESULT_OK -> {
+                showTaskSavedConfirmationMessage("Todo Added")
+            }
+            EDIT_TODO_RESULT_OK -> {
+                showTaskSavedConfirmationMessage("Todo Updated")
+            }
+        }
+    }
+
+    private fun showTaskSavedConfirmationMessage(text: String) = viewModelScope.launch {
+        todoEventChannel.send(TodoEvent.ShowTodoSavedConfirmationMessage(text))
+    }
+
+    fun onDeleteAllCompletedClick() = viewModelScope.launch {
+        todoEventChannel.send(TodoEvent.NavigateToDeleteAllCompletedScreen)
+    }
+}
 
 // same as enum but sealed class can hold the data
 sealed class TodoEvent {
+    object NavigateToAddTodoScreen : TodoEvent()
+    data class NavigateToEditTodoScreen(val todo: Todo) : TodoEvent()
     data class ShowUndoDeleteTodoMessage(val todo: Todo) : TodoEvent()
+    data class ShowTodoSavedConfirmationMessage(val message: String) : TodoEvent()
+    object NavigateToDeleteAllCompletedScreen : TodoEvent()
 }

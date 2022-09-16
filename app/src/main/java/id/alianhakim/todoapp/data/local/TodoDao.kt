@@ -36,4 +36,7 @@ interface TodoDao {
                 getTodosSortedByTitle(searchQuery, hideCompleted)
             }
         }
+
+    @Query("DELETE FROM todos_table WHERE is_completed = 1")
+    suspend fun deleteCompletedTodo()
 }
